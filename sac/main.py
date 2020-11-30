@@ -34,25 +34,25 @@ if __name__ == '__main__':
     policy_net = models.policy_net
 
     ################---Train---################
-    max_transitions_num = 30000
-    max_eplen = 200
-    transition_id = 0
+    max_frames = 20000
+    max_steps = 200
+    frame_idx = 0
     rewards = []
-    batch_size = 32
+    batch_size = 128
     gamma = 0.99
     soft_tau = 1e-2
     eps = 1.0
 
-    while transition_id < max_transitions_num:
-    # for transition_id in tqdm(range(max_transitions_num), total=max_transitions_num):
+    while frame_idx < max_frames:
+    # for frame_idx in tqdm(range(max_frames), total=max_frames):
         state = env.reset()
         episode_reward = 0
-        if transition_id % 1000 == 0:
-            print(transition_id, '/', max_transitions_num)
-        print(len(replay_buffer))
+        if frame_idx % 1000 == 0:
+            print(frame_idx, '/', max_frames)
+        print(replay_buffer)
 
-        for step in range(max_eplen):
-            if transition_id >= 2000:
+        for step in range(max_steps):
+            if frame_idx >= 5000:
                 action = policy_net.get_action(state).detach().numpy()
                 next_state, reward, episode_end, _ = env.step(action)
             else:
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
             state = next_state
             episode_reward += reward
-            transition_id += 1
+            frame_idx += 1
 
             if len(replay_buffer) > batch_size:
                 if use_priors:
@@ -72,8 +72,8 @@ if __name__ == '__main__':
                 else:
                     models.update(replay_buffer, batch_size)
 
-            if transition_id % 99999 == 0:
-                plot(transition_id, rewards)
+            if frame_idx % 99999 == 0:
+                plot(frame_idx, rewards)
 
             if episode_end:
                 eps = max(0.1, eps * 0.99)
