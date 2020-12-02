@@ -35,6 +35,5 @@ class PrioretizedReplayBuffer:
         for i, e in zip(indices, errors):
             self.priorities[i] = abs(e.item()) + offset
 
-
     def __len__(self):
         return len(self.buffer)
