@@ -19,6 +19,17 @@ def make_env(env_name):
     return env, action_dim, state_dim
 
 
+def make_action(policy_net, env, state, frame_idx, warmup=5000):
+    if frame_idx >= warmup:
+        action = policy_net.get_action(state).detach().numpy()
+        next_state, reward, episode_end, _ = env.step(action)
+    else:
+        action = env.action_space.sample()
+        next_state, reward, episode_end, _ = env.step(action)
+
+    return state, action, reward, next_state, episode_end
+
+
 if __name__ == '__main__':
     env_name = "Pendulum-v0"
     env, action_dim, state_dim = make_env(env_name)
@@ -44,22 +55,14 @@ if __name__ == '__main__':
     eps = 1.0
 
     while frame_idx < max_frames:
-        # for frame_idx in tqdm(range(max_frames), total=max_frames):
         state = env.reset()
         episode_reward = 0
         if frame_idx % 1000 == 0:
             print(frame_idx, '/', max_frames)
-        # print(replay_buffer)
 
         for step in range(max_steps):
-            if frame_idx >= 8000:
-                action = policy_net.get_action(state).detach().numpy()
-                next_state, reward, episode_end, _ = env.step(action)
-            else:
-                action = env.action_space.sample()
-                next_state, reward, episode_end, _ = env.step(action)
-
-            replay_buffer.push(state, action, reward, next_state, episode_end)
+            state, action, reward, next_state, done = make_action(policy_net, env, state, frame_idx, warmup=8000)
+            replay_buffer.push(state, action, reward, next_state, done)
 
             state = next_state
             episode_reward += reward
@@ -72,10 +75,7 @@ if __name__ == '__main__':
                 else:
                     models.update(replay_buffer, batch_size)
 
-            # if frame_idx >= max_frames:
-            #    plot(frame_idx, rewards)
-
-            if episode_end:
+            if done:
                 eps = max(0.1, eps * 0.99)
                 break
         rewards.append(episode_reward)
